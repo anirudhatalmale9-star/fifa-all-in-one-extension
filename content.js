@@ -395,22 +395,46 @@
 
       // Country dropdown (FIFA uses id="country")
       if (selId === 'country' || selName === 'country') {
-        const countryValue = (account.country || 'USA').toLowerCase();
-        console.log('[FIFA] Found country dropdown directly, looking for:', countryValue, 'Options:', opts.map(o => `${o.value}="${o.textContent}"`).slice(0, 10));
-        for (const opt of opts) {
-          const optValue = (opt.value || '').toLowerCase();
-          const optText = (opt.textContent || '').toLowerCase().trim();
-          // Match USA, United States, US, etc.
-          if (optValue === countryValue || optText === countryValue ||
-              optValue.includes(countryValue) || optText.includes(countryValue) ||
-              (countryValue === 'usa' && (optText.includes('united states') || optValue.includes('united states') || optValue === 'us')) ||
-              (countryValue === 'us' && (optText.includes('united states') || optValue.includes('united states') || optValue === 'usa'))) {
-            sel.value = opt.value;
-            sel.dispatchEvent(new Event('change', { bubbles: true }));
-            sel.dispatchEvent(new Event('input', { bubbles: true }));
-            filled++;
-            console.log('[FIFA] Selected country:', opt.textContent, 'value:', opt.value);
-            break;
+        const countryValue = (account.country || 'USA').toUpperCase().trim();
+        console.log('[FIFA] Found country dropdown directly, looking for:', countryValue, 'Options:', opts.map(o => `${o.value}="${o.textContent}"`).slice(0, 20));
+
+        // For USA - be VERY specific to avoid matching "United Arab Emirates"
+        if (countryValue === 'USA' || countryValue === 'US' || countryValue === 'UNITED STATES') {
+          for (const opt of opts) {
+            const optValue = (opt.value || '').toUpperCase().trim();
+            const optText = (opt.textContent || '').toUpperCase().trim();
+
+            // EXACT matches only for USA to avoid UAE confusion
+            if (optValue === 'US' || optValue === 'USA' || optValue === 'UNITED STATES' ||
+                optValue === 'UNITED STATES OF AMERICA' ||
+                optText === 'US' || optText === 'USA' || optText === 'UNITED STATES' ||
+                optText === 'UNITED STATES OF AMERICA' ||
+                optText.startsWith('UNITED STATES')) {
+              // Make sure it's NOT United Arab Emirates
+              if (!optText.includes('ARAB') && !optText.includes('EMIRATES')) {
+                sel.value = opt.value;
+                sel.dispatchEvent(new Event('change', { bubbles: true }));
+                sel.dispatchEvent(new Event('input', { bubbles: true }));
+                filled++;
+                console.log('[FIFA] Selected country (USA):', opt.textContent, 'value:', opt.value);
+                break;
+              }
+            }
+          }
+        } else {
+          // For other countries, use flexible matching
+          for (const opt of opts) {
+            const optValue = (opt.value || '').toLowerCase();
+            const optText = (opt.textContent || '').toLowerCase().trim();
+            if (optValue === countryValue.toLowerCase() || optText === countryValue.toLowerCase() ||
+                optValue.includes(countryValue.toLowerCase()) || optText.includes(countryValue.toLowerCase())) {
+              sel.value = opt.value;
+              sel.dispatchEvent(new Event('change', { bubbles: true }));
+              sel.dispatchEvent(new Event('input', { bubbles: true }));
+              filled++;
+              console.log('[FIFA] Selected country:', opt.textContent, 'value:', opt.value);
+              break;
+            }
           }
         }
       }
@@ -581,13 +605,34 @@
 
       // Country dropdown
       if ((selId.includes('country') || selName.includes('country') || labelText.includes('country')) && account.country) {
-        for (const opt of opts) {
-          if (opt.value.toLowerCase().includes(account.country.toLowerCase()) ||
-              opt.textContent.toLowerCase().includes(account.country.toLowerCase())) {
-            sel.value = opt.value;
-            sel.dispatchEvent(new Event('change', { bubbles: true }));
-            filled++;
-            break;
+        const countryValue = (account.country || 'USA').toUpperCase().trim();
+
+        // For USA - be VERY specific to avoid matching "United Arab Emirates"
+        if (countryValue === 'USA' || countryValue === 'US' || countryValue === 'UNITED STATES') {
+          for (const opt of opts) {
+            const optValue = (opt.value || '').toUpperCase().trim();
+            const optText = (opt.textContent || '').toUpperCase().trim();
+            if ((optValue === 'US' || optValue === 'USA' || optValue === 'UNITED STATES' ||
+                 optValue === 'UNITED STATES OF AMERICA' ||
+                 optText === 'US' || optText === 'USA' || optText === 'UNITED STATES' ||
+                 optText === 'UNITED STATES OF AMERICA' ||
+                 optText.startsWith('UNITED STATES')) &&
+                !optText.includes('ARAB') && !optText.includes('EMIRATES')) {
+              sel.value = opt.value;
+              sel.dispatchEvent(new Event('change', { bubbles: true }));
+              filled++;
+              break;
+            }
+          }
+        } else {
+          for (const opt of opts) {
+            if (opt.value.toLowerCase().includes(account.country.toLowerCase()) ||
+                opt.textContent.toLowerCase().includes(account.country.toLowerCase())) {
+              sel.value = opt.value;
+              sel.dispatchEvent(new Event('change', { bubbles: true }));
+              filled++;
+              break;
+            }
           }
         }
         continue;
