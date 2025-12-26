@@ -1142,69 +1142,75 @@
   // ========== AUTO-CLICK HELPERS ==========
   // Auto-click "Accept ticket downgrade" checkbox and "Add a new card" button
   async function autoClickCheckoutElements() {
-    await delay(1500);
+    await delay(500);
     let clickedDowngrade = false;
     let clickedAddCard = false;
 
     console.log('[FIFA] Starting auto-click for checkout elements...');
 
     // 1. Find and click "Accept ticket(s) downgrade" checkbox
-    // Strategy 1: Find all checkboxes and check parent text
-    const allCheckboxes = document.querySelectorAll('input[type="checkbox"]');
-    console.log('[FIFA] Found', allCheckboxes.length, 'checkboxes on page');
+    // FIFA-SPECIFIC Strategy: Look for stx-lt-changeSeatCatApproval elements
+    const fifaDowngradeContainer = document.querySelector('[class*="changeSeatCatApproval-downgrade"]') ||
+                                    document.querySelector('[class*="downgrade-container"]') ||
+                                    document.querySelector('[id*="changeSeatCatApproval"]');
 
-    for (const cb of allCheckboxes) {
-      // Get text from parent elements up to 5 levels
-      let parentText = '';
-      let parent = cb.parentElement;
-      for (let i = 0; i < 5 && parent; i++) {
-        parentText += ' ' + (parent.textContent || '');
-        parent = parent.parentElement;
-      }
-      parentText = parentText.toLowerCase();
+    if (fifaDowngradeContainer) {
+      console.log('[FIFA] Found FIFA downgrade container:', fifaDowngradeContainer.className);
+      // Find checkbox inside or nearby
+      const checkbox = fifaDowngradeContainer.querySelector('input[type="checkbox"]') ||
+                       fifaDowngradeContainer.parentElement?.querySelector('input[type="checkbox"]') ||
+                       fifaDowngradeContainer.closest('div')?.querySelector('input[type="checkbox"]');
 
-      console.log('[FIFA] Checkbox parent text:', parentText.slice(0, 100));
-
-      if (parentText.includes('downgrade') && parentText.includes('accept')) {
-        if (!cb.checked) {
-          cb.scrollIntoView({ behavior: 'instant', block: 'center' });
+      if (checkbox) {
+        console.log('[FIFA] Found checkbox in downgrade container, checked:', checkbox.checked);
+        if (!checkbox.checked) {
+          checkbox.scrollIntoView({ behavior: 'instant', block: 'center' });
           await delay(200);
-          cb.click();
-          cb.dispatchEvent(new Event('change', { bubbles: true }));
-          cb.dispatchEvent(new Event('input', { bubbles: true }));
-          console.log('[FIFA] Clicked Accept ticket(s) downgrade checkbox');
+          checkbox.click();
+          checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+          console.log('[FIFA] Clicked FIFA downgrade checkbox');
           showNotification('Accepted ticket downgrade');
           clickedDowngrade = true;
-          break;
         } else {
           console.log('[FIFA] Downgrade checkbox already checked');
           clickedDowngrade = true;
-          break;
         }
+      } else {
+        // Try clicking the container itself (might be a custom checkbox)
+        console.log('[FIFA] No checkbox found, clicking container');
+        fifaDowngradeContainer.click();
+        showNotification('Clicked downgrade area');
+        clickedDowngrade = true;
       }
     }
 
-    // Strategy 2: Find by label with "for" attribute
+    // Strategy 2: Find all checkboxes and check parent text
     if (!clickedDowngrade) {
-      const labels = document.querySelectorAll('label');
-      for (const label of labels) {
-        const text = (label.textContent || '').toLowerCase();
-        if (text.includes('downgrade')) {
-          const forId = label.getAttribute('for');
-          let checkbox = null;
-          if (forId) {
-            checkbox = document.getElementById(forId);
-          }
-          if (!checkbox) {
-            checkbox = label.querySelector('input[type="checkbox"]');
-          }
-          if (checkbox && !checkbox.checked) {
-            checkbox.scrollIntoView({ behavior: 'instant', block: 'center' });
+      const allCheckboxes = document.querySelectorAll('input[type="checkbox"]');
+      console.log('[FIFA] Found', allCheckboxes.length, 'checkboxes on page');
+
+      for (const cb of allCheckboxes) {
+        let parentText = '';
+        let parent = cb.parentElement;
+        for (let i = 0; i < 5 && parent; i++) {
+          parentText += ' ' + (parent.textContent || '') + ' ' + (parent.className || '');
+          parent = parent.parentElement;
+        }
+        parentText = parentText.toLowerCase();
+
+        if (parentText.includes('downgrade') || parentText.includes('seatcatapproval')) {
+          console.log('[FIFA] Found downgrade checkbox via parent text');
+          if (!cb.checked) {
+            cb.scrollIntoView({ behavior: 'instant', block: 'center' });
             await delay(200);
-            checkbox.click();
-            checkbox.dispatchEvent(new Event('change', { bubbles: true }));
-            console.log('[FIFA] Clicked downgrade checkbox via label');
+            cb.click();
+            cb.dispatchEvent(new Event('change', { bubbles: true }));
+            console.log('[FIFA] Clicked downgrade checkbox');
             showNotification('Accepted ticket downgrade');
+            clickedDowngrade = true;
+            break;
+          } else {
+            console.log('[FIFA] Downgrade checkbox already checked');
             clickedDowngrade = true;
             break;
           }
@@ -1214,25 +1220,27 @@
 
     // Strategy 3: Look for custom checkbox elements (React/Vue style)
     if (!clickedDowngrade) {
-      const customCheckboxes = document.querySelectorAll('[role="checkbox"], .checkbox, [class*="checkbox"], [class*="Checkbox"]');
+      const customCheckboxes = document.querySelectorAll('[role="checkbox"], [class*="checkbox"], [class*="Checkbox"], [class*="check-box"]');
       for (const cb of customCheckboxes) {
         let parentText = '';
         let parent = cb.parentElement;
         for (let i = 0; i < 5 && parent; i++) {
-          parentText += ' ' + (parent.textContent || '');
+          parentText += ' ' + (parent.textContent || '') + ' ' + (parent.className || '');
           parent = parent.parentElement;
         }
         parentText = parentText.toLowerCase();
 
-        if (parentText.includes('downgrade')) {
+        if (parentText.includes('downgrade') || parentText.includes('seatcatapproval')) {
           const isChecked = cb.getAttribute('aria-checked') === 'true' ||
                             cb.classList.contains('checked') ||
-                            cb.classList.contains('selected');
+                            cb.classList.contains('selected') ||
+                            cb.querySelector('input[type="checkbox"]')?.checked;
+          console.log('[FIFA] Found custom downgrade checkbox, checked:', isChecked);
           if (!isChecked) {
             cb.scrollIntoView({ behavior: 'instant', block: 'center' });
             await delay(200);
             cb.click();
-            console.log('[FIFA] Clicked custom checkbox for downgrade');
+            console.log('[FIFA] Clicked custom downgrade checkbox');
             showNotification('Accepted ticket downgrade');
             clickedDowngrade = true;
             break;
@@ -1241,31 +1249,21 @@
       }
     }
 
-    // Strategy 4: Click anywhere on the downgrade row to toggle
+    // Strategy 4: Click the label/text element directly
     if (!clickedDowngrade) {
-      const allElements = document.querySelectorAll('*');
-      for (const el of allElements) {
+      const textElements = document.querySelectorAll('p, span, label, div');
+      for (const el of textElements) {
         const text = (el.textContent || '').toLowerCase();
-        const directText = Array.from(el.childNodes)
-          .filter(n => n.nodeType === Node.TEXT_NODE)
-          .map(n => n.textContent.trim())
-          .join(' ').toLowerCase();
-
-        if ((directText.includes('accept') && directText.includes('downgrade')) ||
-            text === 'accept ticket(s) downgrade') {
-          console.log('[FIFA] Found downgrade text element, looking for clickable');
-          // Find clickable parent or the element itself
-          const clickable = el.closest('[role="checkbox"]') ||
-                            el.closest('label') ||
-                            el.closest('[class*="checkbox"]') ||
-                            el;
-          const rect = clickable.getBoundingClientRect();
-          if (rect.width > 0 && rect.height > 0) {
-            clickable.scrollIntoView({ behavior: 'instant', block: 'center' });
+        if (text.includes('accept') && text.includes('downgrade') && text.length < 100) {
+          console.log('[FIFA] Found downgrade text element:', el.tagName, text.slice(0, 50));
+          // Click the parent container which might toggle the checkbox
+          const clickTarget = el.closest('[class*="container"]') || el.closest('label') || el.parentElement;
+          if (clickTarget) {
+            clickTarget.scrollIntoView({ behavior: 'instant', block: 'center' });
             await delay(200);
-            clickable.click();
-            console.log('[FIFA] Clicked downgrade element directly');
-            showNotification('Accepted ticket downgrade');
+            clickTarget.click();
+            console.log('[FIFA] Clicked downgrade text parent');
+            showNotification('Clicked downgrade option');
             clickedDowngrade = true;
             break;
           }
@@ -1273,27 +1271,30 @@
       }
     }
 
-    await delay(800);
+    await delay(500);
 
     // 2. Find and click "+ Add a new card" link/button
     console.log('[FIFA] Looking for Add a new card...');
 
-    // Strategy 1: Look for elements with exact or near-exact text
-    const clickableElements = document.querySelectorAll('a, button, span[role="button"], div[role="button"], [class*="link"], [class*="Link"], [class*="button"], [class*="Button"]');
-    console.log('[FIFA] Found', clickableElements.length, 'clickable elements');
+    // FIFA-SPECIFIC: Look for add card elements
+    const addCardSelectors = [
+      '[class*="add-card"]',
+      '[class*="addCard"]',
+      '[class*="new-card"]',
+      '[class*="newCard"]',
+      'a[href*="card"]',
+      'button[class*="card"]'
+    ];
 
-    for (const el of clickableElements) {
-      const text = (el.textContent || '').trim();
-      const textLower = text.toLowerCase();
-
-      if (textLower.includes('add') && textLower.includes('card') && textLower.includes('new')) {
-        const rect = el.getBoundingClientRect();
-        if (rect.width > 0 && rect.height > 0) {
-          console.log('[FIFA] Found Add a new card element:', text);
+    for (const selector of addCardSelectors) {
+      const el = document.querySelector(selector);
+      if (el) {
+        const text = (el.textContent || '').toLowerCase();
+        if (text.includes('add') || text.includes('new')) {
+          console.log('[FIFA] Found add card element via selector:', selector);
           el.scrollIntoView({ behavior: 'instant', block: 'center' });
           await delay(300);
           el.click();
-          console.log('[FIFA] Clicked Add a new card');
           showNotification('Clicked Add a new card');
           clickedAddCard = true;
           break;
@@ -1301,21 +1302,20 @@
       }
     }
 
-    // Strategy 2: Look for any element with "Add a new card" text
+    // Strategy 2: Look for elements with "Add a new card" text
     if (!clickedAddCard) {
-      const allElements = document.querySelectorAll('*');
-      for (const el of allElements) {
-        const directText = Array.from(el.childNodes)
-          .filter(n => n.nodeType === Node.TEXT_NODE)
-          .map(n => n.textContent.trim())
-          .join(' ');
+      const clickableElements = document.querySelectorAll('a, button, span, div, p');
+      for (const el of clickableElements) {
+        const text = (el.textContent || '').trim();
+        const textLower = text.toLowerCase();
 
-        if (directText.toLowerCase().includes('add a new card') ||
-            directText === '+ Add a new card' ||
-            directText === 'Add a new card') {
+        if ((textLower.includes('add') && textLower.includes('card')) ||
+            textLower === '+ add a new card' ||
+            textLower === 'add a new card' ||
+            textLower === 'add new card') {
           const rect = el.getBoundingClientRect();
-          if (rect.width > 0 && rect.height > 0) {
-            console.log('[FIFA] Found Add a new card by text:', directText);
+          if (rect.width > 0 && rect.height > 0 && text.length < 50) {
+            console.log('[FIFA] Found Add a new card element:', text);
             el.scrollIntoView({ behavior: 'instant', block: 'center' });
             await delay(300);
             el.click();
@@ -1328,21 +1328,20 @@
       }
     }
 
-    // Strategy 3: Look for "+ Add" pattern with SVG plus icon
+    // Strategy 3: Look for "+" icon near "card" text
     if (!clickedAddCard) {
-      const svgPlus = document.querySelectorAll('svg, [class*="icon"], [class*="Icon"]');
-      for (const svg of svgPlus) {
-        const parent = svg.parentElement;
+      const plusElements = document.querySelectorAll('[class*="plus"], [class*="add"], svg');
+      for (const plus of plusElements) {
+        const parent = plus.closest('a') || plus.closest('button') || plus.closest('div') || plus.parentElement;
         if (parent) {
           const parentText = (parent.textContent || '').toLowerCase();
-          if (parentText.includes('add') && parentText.includes('card')) {
+          if (parentText.includes('card') && parentText.length < 50) {
             const rect = parent.getBoundingClientRect();
             if (rect.width > 0 && rect.height > 0) {
-              console.log('[FIFA] Found Add card near icon');
+              console.log('[FIFA] Found Add card via plus icon');
               parent.scrollIntoView({ behavior: 'instant', block: 'center' });
               await delay(300);
               parent.click();
-              console.log('[FIFA] Clicked Add a new card via icon parent');
               showNotification('Clicked Add a new card');
               clickedAddCard = true;
               break;
@@ -1352,8 +1351,10 @@
       }
     }
 
-    if (clickedDowngrade) console.log('[FIFA] Downgrade checkbox handled');
-    if (clickedAddCard) console.log('[FIFA] Add card clicked');
+    console.log('[FIFA] Results - Downgrade:', clickedDowngrade, 'Add Card:', clickedAddCard);
+    if (!clickedDowngrade && !clickedAddCard) {
+      showNotification('Could not find checkout elements. Try clicking manually.', false);
+    }
 
     return clickedDowngrade || clickedAddCard;
   }
