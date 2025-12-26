@@ -992,13 +992,16 @@
       autoFillAttempted = false;
       autoFillPage();
     }
-    // F2 for profile selector popup
+    // F2 for profile selector popup + navigate to FIFA ticket page
     if (e.key === 'F2') {
       e.preventDefault();
       const selectedProfile = await showProfileSelector();
       if (selectedProfile !== null) {
-        autoFillAttempted = false;
-        autoFillPage();
+        // Navigate to FIFA ticket page after profile selection
+        const fifaUrl = 'https://access.tickets.fifa.com/pkpcontroller/selectqueue.do?source=https%3A%2F%2Ffifa-fwc26-us.tickets.fifa.com/&queueName=10-FWC26-LotteryFCFS';
+        console.log('[FIFA] Navigating to FIFA ticket page...');
+        showNotification('Opening FIFA tickets page...');
+        window.location.href = fifaUrl;
       }
     }
     // Alt+C for checkout actions (Accept downgrade + Add new card)
