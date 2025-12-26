@@ -194,4 +194,16 @@ document.addEventListener('DOMContentLoaded', () => {
       showStatus('Ticket selection started!');
     }
   });
+
+  // Go to FIFA button - navigate to FIFA lottery page with selected profile
+  document.getElementById('goToFifaBtn').addEventListener('click', async () => {
+    const fifaUrl = 'https://fifa-fwc26-us.tickets.fifa.com/account/lotteryApplications';
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab && tab.id) {
+      chrome.tabs.update(tab.id, { url: fifaUrl });
+    } else {
+      chrome.tabs.create({ url: fifaUrl });
+    }
+    window.close();
+  });
 });
