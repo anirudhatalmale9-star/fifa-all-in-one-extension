@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "FIFA All-in-One",
-  "version": "4.0.1",
+  "version": "4.0.2",
   "description": "Auto-fill forms + ticket selector - all in one extension",
   "permissions": [
     "activeTab",
@@ -24,7 +24,7 @@
     },
     "profile-selector": {
       "suggested_key": {
-        "default": "Alt+P"
+        "default": "Alt+Q"
       },
       "description": "Open profile selector and navigate to FIFA"
     }
