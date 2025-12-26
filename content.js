@@ -1276,25 +1276,20 @@
     // 2. Find and click "+ Add a new card" link/button
     console.log('[FIFA] Looking for Add a new card...');
 
-    // FIFA-SPECIFIC: Look for add card elements
-    const addCardSelectors = [
-      '[class*="add-card"]',
-      '[class*="addCard"]',
-      '[class*="new-card"]',
-      '[class*="newCard"]',
-      'a[href*="card"]',
-      'button[class*="card"]'
-    ];
-
-    for (const selector of addCardSelectors) {
-      const el = document.querySelector(selector);
-      if (el) {
-        const text = (el.textContent || '').toLowerCase();
-        if (text.includes('add') || text.includes('new')) {
-          console.log('[FIFA] Found add card element via selector:', selector);
-          el.scrollIntoView({ behavior: 'instant', block: 'center' });
+    // FIFA-SPECIFIC Strategy 1: Look for span.p-button-label with "Add a new card" text
+    const buttonLabels = document.querySelectorAll('span.p-button-label, span[class*="button-label"], span[data-pc-section="label"]');
+    console.log('[FIFA] Found', buttonLabels.length, 'button labels');
+    for (const label of buttonLabels) {
+      const text = (label.textContent || '').trim().toLowerCase();
+      if (text.includes('add') && text.includes('card')) {
+        console.log('[FIFA] Found Add card button label:', label.textContent);
+        // Click the parent button element
+        const button = label.closest('button') || label.parentElement;
+        if (button) {
+          button.scrollIntoView({ behavior: 'instant', block: 'center' });
           await delay(300);
-          el.click();
+          button.click();
+          console.log('[FIFA] Clicked Add a new card button');
           showNotification('Clicked Add a new card');
           clickedAddCard = true;
           break;
@@ -1302,23 +1297,40 @@
       }
     }
 
-    // Strategy 2: Look for elements with "Add a new card" text
+    // FIFA-SPECIFIC Strategy 2: Look for button with p-button classes containing "card" text
     if (!clickedAddCard) {
-      const clickableElements = document.querySelectorAll('a, button, span, div, p');
-      for (const el of clickableElements) {
-        const text = (el.textContent || '').trim();
-        const textLower = text.toLowerCase();
+      const pButtons = document.querySelectorAll('button.p-button, button[class*="p-button"], button[data-pc-name="button"]');
+      console.log('[FIFA] Found', pButtons.length, 'p-button elements');
+      for (const btn of pButtons) {
+        const text = (btn.textContent || '').trim().toLowerCase();
+        if (text.includes('add') && text.includes('card')) {
+          console.log('[FIFA] Found Add card p-button:', btn.textContent.trim());
+          btn.scrollIntoView({ behavior: 'instant', block: 'center' });
+          await delay(300);
+          btn.click();
+          console.log('[FIFA] Clicked Add a new card p-button');
+          showNotification('Clicked Add a new card');
+          clickedAddCard = true;
+          break;
+        }
+      }
+    }
 
-        if ((textLower.includes('add') && textLower.includes('card')) ||
-            textLower === '+ add a new card' ||
-            textLower === 'add a new card' ||
-            textLower === 'add new card') {
-          const rect = el.getBoundingClientRect();
-          if (rect.width > 0 && rect.height > 0 && text.length < 50) {
-            console.log('[FIFA] Found Add a new card element:', text);
-            el.scrollIntoView({ behavior: 'instant', block: 'center' });
+    // Strategy 3: Look for any button/link with "Add a new card" text
+    if (!clickedAddCard) {
+      const allButtons = document.querySelectorAll('button, a, [role="button"]');
+      for (const btn of allButtons) {
+        const text = (btn.textContent || '').trim();
+        const textLower = text.toLowerCase();
+        if ((textLower === 'add a new card' || textLower === '+ add a new card' ||
+             (textLower.includes('add') && textLower.includes('new') && textLower.includes('card'))) &&
+            text.length < 50) {
+          const rect = btn.getBoundingClientRect();
+          if (rect.width > 0 && rect.height > 0) {
+            console.log('[FIFA] Found Add a new card button:', text);
+            btn.scrollIntoView({ behavior: 'instant', block: 'center' });
             await delay(300);
-            el.click();
+            btn.click();
             console.log('[FIFA] Clicked Add a new card');
             showNotification('Clicked Add a new card');
             clickedAddCard = true;
@@ -1328,24 +1340,28 @@
       }
     }
 
-    // Strategy 3: Look for "+" icon near "card" text
+    // Strategy 4: Look for clickable element with + Add a new card (including spans/divs)
     if (!clickedAddCard) {
-      const plusElements = document.querySelectorAll('[class*="plus"], [class*="add"], svg');
-      for (const plus of plusElements) {
-        const parent = plus.closest('a') || plus.closest('button') || plus.closest('div') || plus.parentElement;
-        if (parent) {
-          const parentText = (parent.textContent || '').toLowerCase();
-          if (parentText.includes('card') && parentText.length < 50) {
-            const rect = parent.getBoundingClientRect();
-            if (rect.width > 0 && rect.height > 0) {
-              console.log('[FIFA] Found Add card via plus icon');
-              parent.scrollIntoView({ behavior: 'instant', block: 'center' });
-              await delay(300);
-              parent.click();
-              showNotification('Clicked Add a new card');
-              clickedAddCard = true;
-              break;
-            }
+      const allElements = document.querySelectorAll('*');
+      for (const el of allElements) {
+        // Check for direct text content only (not nested)
+        const directText = Array.from(el.childNodes)
+          .filter(n => n.nodeType === Node.TEXT_NODE)
+          .map(n => n.textContent.trim())
+          .join(' ');
+
+        if (directText.toLowerCase() === 'add a new card' || directText === '+ Add a new card') {
+          console.log('[FIFA] Found exact Add a new card text in:', el.tagName);
+          const clickTarget = el.closest('button') || el.closest('a') || el;
+          const rect = clickTarget.getBoundingClientRect();
+          if (rect.width > 0 && rect.height > 0) {
+            clickTarget.scrollIntoView({ behavior: 'instant', block: 'center' });
+            await delay(300);
+            clickTarget.click();
+            console.log('[FIFA] Clicked Add a new card element');
+            showNotification('Clicked Add a new card');
+            clickedAddCard = true;
+            break;
           }
         }
       }
