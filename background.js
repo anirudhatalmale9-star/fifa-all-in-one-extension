@@ -347,14 +347,14 @@ chrome.commands.onCommand.addListener(async (command) => {
           });
           console.log('[FIFA] Selected profile:', profileNum);
 
-          // Navigate to FIFA ticket page
-          const fifaUrl = 'https://access.tickets.fifa.com/pkpcontroller/selectqueue.do?source=https%3A%2F%2Ffifa-fwc26-us.tickets.fifa.com/&queueName=10-FWC26-LotteryFCFS';
+          // Navigate to FIFA lottery applications page
+          const fifaUrl = 'https://fifa-fwc26-us.tickets.fifa.com/account/lotteryApplications';
           chrome.tabs.update(tab.id, { url: fifaUrl });
         }
       });
     } else {
       // No tab - open new tab with FIFA page
-      const fifaUrl = 'https://access.tickets.fifa.com/pkpcontroller/selectqueue.do?source=https%3A%2F%2Ffifa-fwc26-us.tickets.fifa.com/&queueName=10-FWC26-LotteryFCFS';
+      const fifaUrl = 'https://fifa-fwc26-us.tickets.fifa.com/account/lotteryApplications';
       chrome.tabs.create({ url: fifaUrl });
     }
   }

@@ -1012,10 +1012,10 @@
       e.preventDefault();
       const selectedProfile = await showProfileSelector();
       if (selectedProfile !== null) {
-        // Navigate to FIFA ticket page after profile selection
-        const fifaUrl = 'https://access.tickets.fifa.com/pkpcontroller/selectqueue.do?source=https%3A%2F%2Ffifa-fwc26-us.tickets.fifa.com/&queueName=10-FWC26-LotteryFCFS';
-        console.log('[FIFA] Navigating to FIFA ticket page...');
-        showNotification('Opening FIFA tickets page...');
+        // Navigate to FIFA lottery applications page after profile selection
+        const fifaUrl = 'https://fifa-fwc26-us.tickets.fifa.com/account/lotteryApplications';
+        console.log('[FIFA] Navigating to FIFA lottery applications page...');
+        showNotification('Opening FIFA lottery applications...');
         window.location.href = fifaUrl;
       }
     }
