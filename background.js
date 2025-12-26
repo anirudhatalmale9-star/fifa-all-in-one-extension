@@ -301,12 +301,62 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 chrome.commands.onCommand.addListener(async (command) => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
-  if (!tab) return;
-
   if (command === 'autofill') {
-    injectAutofillIntoAllFrames(tab.id);
+    if (tab) injectAutofillIntoAllFrames(tab.id);
   } else if (command === 'select-matches') {
-    chrome.tabs.sendMessage(tab.id, { action: 'selectMatches' });
+    if (tab) chrome.tabs.sendMessage(tab.id, { action: 'selectMatches' });
+  } else if (command === 'profile-selector') {
+    // F2 pressed - show profile selector popup and navigate to FIFA
+    console.log('[FIFA] F2 pressed - opening profile selector');
+
+    // Load accounts
+    let accounts = await loadAccountsFromCSV();
+    if (accounts.length === 0) {
+      const result = await chrome.storage.local.get(['accounts']);
+      accounts = result.accounts || [];
+    }
+
+    if (accounts.length === 0) {
+      console.log('[FIFA] No accounts loaded');
+      return;
+    }
+
+    // Get current selected row
+    const rowResult = await chrome.storage.local.get(['selectedRow']);
+    const currentRow = rowResult.selectedRow || 0;
+
+    // Prompt for profile number using a simple approach - inject script to show prompt
+    if (tab) {
+      chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: (totalAccounts, currentRow, currentEmail) => {
+          const input = prompt(
+            `Select profile (1-${totalAccounts})\n\nCurrent: ${currentRow + 1} - ${currentEmail}\n\nEnter profile number:`,
+            (currentRow + 1).toString()
+          );
+          return input ? parseInt(input) : null;
+        },
+        args: [accounts.length, currentRow, accounts[currentRow]?.email || 'N/A']
+      }).then(async (results) => {
+        const profileNum = results[0]?.result;
+        if (profileNum && profileNum >= 1 && profileNum <= accounts.length) {
+          // Save selected profile
+          await chrome.storage.local.set({
+            accounts: accounts,
+            selectedRow: profileNum - 1
+          });
+          console.log('[FIFA] Selected profile:', profileNum);
+
+          // Navigate to FIFA ticket page
+          const fifaUrl = 'https://access.tickets.fifa.com/pkpcontroller/selectqueue.do?source=https%3A%2F%2Ffifa-fwc26-us.tickets.fifa.com/&queueName=10-FWC26-LotteryFCFS';
+          chrome.tabs.update(tab.id, { url: fifaUrl });
+        }
+      });
+    } else {
+      // No tab - open new tab with FIFA page
+      const fifaUrl = 'https://access.tickets.fifa.com/pkpcontroller/selectqueue.do?source=https%3A%2F%2Ffifa-fwc26-us.tickets.fifa.com/&queueName=10-FWC26-LotteryFCFS';
+      chrome.tabs.create({ url: fifaUrl });
+    }
   }
 });
 
