@@ -224,12 +224,16 @@
     }
 
     // Handle custom dropdown/autocomplete for State/Province (FIFA uses these)
-    const stateDropdowns = document.querySelectorAll('[id*="addressState"], [id*="state"], [name*="state"], [aria-label*="State"], [aria-label*="Province"], [placeholder*="State"], [placeholder*="Province"]');
-    console.log('[FIFA] Looking for custom state dropdowns, found:', stateDropdowns.length);
-    for (const el of stateDropdowns) {
-      if (account.province) {
-        const provinceValue = account.province.toUpperCase().trim();
-        const fullStateName = US_STATES[provinceValue] || account.province;
+    if (account.province) {
+      const provinceValue = account.province.toUpperCase().trim();
+      const fullStateName = US_STATES[provinceValue] || account.province;
+      console.log('[FIFA] Looking for Province/State dropdown to fill with:', fullStateName);
+
+      // Strategy 1: Find by ID/name/aria attributes
+      const stateDropdowns = document.querySelectorAll('[id*="addressState"], [id*="state"], [id*="province"], [name*="state"], [name*="province"], [aria-label*="State"], [aria-label*="Province"], [placeholder*="State"], [placeholder*="Province"]');
+      console.log('[FIFA] Found state dropdowns by attributes:', stateDropdowns.length);
+
+      for (const el of stateDropdowns) {
         console.log('[FIFA] Found custom state element:', el.tagName, el.id || el.name, '- filling with:', fullStateName);
 
         // Click to open dropdown
@@ -252,6 +256,93 @@
             opt.click();
             filled++;
             break;
+          }
+        }
+      }
+
+      // Strategy 2: Find by label text "Province/State" or "State" - FIFA style
+      const allLabels = document.querySelectorAll('label, span, div, legend');
+      for (const label of allLabels) {
+        const labelText = (label.textContent || '').toLowerCase().trim();
+        if (labelText === 'province/state' || labelText === 'province/state *' ||
+            labelText === 'state' || labelText === 'state *' ||
+            labelText === 'province' || labelText === 'province *') {
+          console.log('[FIFA] Found Province/State label:', label.textContent);
+
+          // Find the dropdown near this label - look for sibling or child with dropdown arrow
+          const parent = label.closest('fieldset') || label.closest('div') || label.parentElement;
+          if (parent) {
+            // Look for clickable dropdown element
+            const dropdownTrigger = parent.querySelector('[class*="dropdown"]') ||
+                                    parent.querySelector('[class*="select"]') ||
+                                    parent.querySelector('[role="combobox"]') ||
+                                    parent.querySelector('[role="listbox"]') ||
+                                    parent.querySelector('span[class*="fi"]') ||
+                                    parent.querySelector('[aria-haspopup]') ||
+                                    parent.querySelector('div > span');
+
+            if (dropdownTrigger) {
+              console.log('[FIFA] Found dropdown trigger near label:', dropdownTrigger.tagName, dropdownTrigger.className);
+              dropdownTrigger.click();
+              await new Promise(r => setTimeout(r, 500));
+
+              // Look for options that appeared
+              const options = document.querySelectorAll('[role="option"], [class*="option"], li, [class*="item"]');
+              console.log('[FIFA] Found', options.length, 'potential options');
+              for (const opt of options) {
+                const optText = (opt.textContent || '').trim();
+                if (optText.toLowerCase() === fullStateName.toLowerCase()) {
+                  console.log('[FIFA] Clicking state option:', optText);
+                  opt.click();
+                  filled++;
+                  break;
+                }
+              }
+            }
+
+            // Also try clicking directly on the displayed value (div showing current selection)
+            const currentValue = parent.querySelector('div[class*="value"]') ||
+                                 parent.querySelector('span[class*="value"]') ||
+                                 parent.querySelector('[class*="selected"]');
+            if (currentValue) {
+              console.log('[FIFA] Clicking current value element');
+              currentValue.click();
+              await new Promise(r => setTimeout(r, 500));
+
+              const options = document.querySelectorAll('[role="option"], [class*="option"], li, [class*="item"]');
+              for (const opt of options) {
+                const optText = (opt.textContent || '').trim();
+                if (optText.toLowerCase() === fullStateName.toLowerCase()) {
+                  console.log('[FIFA] Clicking state option:', optText);
+                  opt.click();
+                  filled++;
+                  break;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // Strategy 3: Look for any dropdown showing US states
+      const allDropdownLike = document.querySelectorAll('[class*="dropdown"], [class*="select"], [role="combobox"], [aria-haspopup="listbox"]');
+      for (const dd of allDropdownLike) {
+        // Check if this dropdown's parent contains "state" or "province" text
+        const parentText = (dd.closest('fieldset')?.textContent || dd.parentElement?.textContent || '').toLowerCase();
+        if (parentText.includes('province') || parentText.includes('state')) {
+          console.log('[FIFA] Found dropdown in state/province context');
+          dd.click();
+          await new Promise(r => setTimeout(r, 500));
+
+          const options = document.querySelectorAll('[role="option"], li[class*="option"], [class*="dropdown-item"]');
+          for (const opt of options) {
+            const optText = (opt.textContent || '').trim();
+            if (optText.toLowerCase() === fullStateName.toLowerCase()) {
+              console.log('[FIFA] Clicking state option from context search:', optText);
+              opt.click();
+              filled++;
+              break;
+            }
           }
         }
       }
