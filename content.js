@@ -213,9 +213,47 @@
         continue;
       }
       // Province / State (as input field)
-      if ((nm.includes('province') || nm.includes('state') || nm.includes('region') || id.includes('province') || id.includes('state') || ph.includes('province') || ph.includes('state') || context.includes('province') || context.includes('state')) && account.province) {
-        if (setValue(input, account.province)) filled++;
+      if ((nm.includes('province') || nm.includes('state') || nm.includes('region') || id.includes('province') || id.includes('state') || ph.includes('province') || ph.includes('state') || context.includes('province') || context.includes('state') || id === 'addressstate' || nm === 'addressstate') && account.province) {
+        // Convert state abbreviation to full name if needed
+        const provinceValue = account.province.toUpperCase().trim();
+        const fullStateName = US_STATES[provinceValue] || account.province;
+        console.log('[FIFA] Found state input field, filling with:', fullStateName);
+        if (setValue(input, fullStateName)) filled++;
         continue;
+      }
+    }
+
+    // Handle custom dropdown/autocomplete for State/Province (FIFA uses these)
+    const stateDropdowns = document.querySelectorAll('[id*="addressState"], [id*="state"], [name*="state"], [aria-label*="State"], [aria-label*="Province"], [placeholder*="State"], [placeholder*="Province"]');
+    console.log('[FIFA] Looking for custom state dropdowns, found:', stateDropdowns.length);
+    for (const el of stateDropdowns) {
+      if (account.province) {
+        const provinceValue = account.province.toUpperCase().trim();
+        const fullStateName = US_STATES[provinceValue] || account.province;
+        console.log('[FIFA] Found custom state element:', el.tagName, el.id || el.name, '- filling with:', fullStateName);
+
+        // Click to open dropdown
+        el.click();
+        await new Promise(r => setTimeout(r, 300));
+
+        // Try setting value
+        if (el.tagName === 'INPUT') {
+          setValue(el, fullStateName);
+          filled++;
+        }
+
+        // Look for dropdown options that appeared
+        await new Promise(r => setTimeout(r, 500));
+        const dropdownOptions = document.querySelectorAll('[role="option"], [class*="option"], li[class*="dropdown"], [class*="listitem"]');
+        for (const opt of dropdownOptions) {
+          const optText = (opt.textContent || '').toLowerCase().trim();
+          if (optText === fullStateName.toLowerCase() || optText.includes(fullStateName.toLowerCase())) {
+            console.log('[FIFA] Clicking state option:', opt.textContent);
+            opt.click();
+            filled++;
+            break;
+          }
+        }
       }
     }
 
