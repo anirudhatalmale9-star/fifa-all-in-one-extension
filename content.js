@@ -396,30 +396,52 @@
       // Country dropdown (FIFA uses id="country")
       if (selId === 'country' || selName === 'country') {
         const countryValue = (account.country || 'USA').toUpperCase().trim();
-        console.log('[FIFA] Found country dropdown directly, looking for:', countryValue, 'Options:', opts.map(o => `${o.value}="${o.textContent}"`).slice(0, 20));
+        console.log('[FIFA] Found country dropdown with id="country"');
+        console.log('[FIFA] Looking for country:', countryValue);
+        console.log('[FIFA] All options:', opts.map(o => `value="${o.value}" text="${o.textContent.trim()}"`));
 
-        // For USA - be VERY specific to avoid matching "United Arab Emirates"
+        // For USA - search specifically for "United States" text to avoid UAE
         if (countryValue === 'USA' || countryValue === 'US' || countryValue === 'UNITED STATES') {
-          for (const opt of opts) {
-            const optValue = (opt.value || '').toUpperCase().trim();
-            const optText = (opt.textContent || '').toUpperCase().trim();
+          let usaOption = null;
 
-            // EXACT matches only for USA to avoid UAE confusion
-            if (optValue === 'US' || optValue === 'USA' || optValue === 'UNITED STATES' ||
-                optValue === 'UNITED STATES OF AMERICA' ||
-                optText === 'US' || optText === 'USA' || optText === 'UNITED STATES' ||
-                optText === 'UNITED STATES OF AMERICA' ||
-                optText.startsWith('UNITED STATES')) {
-              // Make sure it's NOT United Arab Emirates
+          // FIRST: Try to find option with text "United States" (exact match)
+          for (const opt of opts) {
+            const optText = (opt.textContent || '').trim();
+            if (optText === 'United States' || optText === 'United States of America') {
+              usaOption = opt;
+              console.log('[FIFA] Found USA option by exact text match:', optText, 'value:', opt.value);
+              break;
+            }
+          }
+
+          // SECOND: If not found, look for option with value "US" or starts with "United States"
+          if (!usaOption) {
+            for (const opt of opts) {
+              const optValue = (opt.value || '').toUpperCase().trim();
+              const optText = (opt.textContent || '').trim().toUpperCase();
+              // Must NOT contain Arab/Emirates
               if (!optText.includes('ARAB') && !optText.includes('EMIRATES')) {
-                sel.value = opt.value;
-                sel.dispatchEvent(new Event('change', { bubbles: true }));
-                sel.dispatchEvent(new Event('input', { bubbles: true }));
-                filled++;
-                console.log('[FIFA] Selected country (USA):', opt.textContent, 'value:', opt.value);
-                break;
+                if (optValue === 'US' || optValue === 'USA' || optText.startsWith('UNITED STATES')) {
+                  usaOption = opt;
+                  console.log('[FIFA] Found USA option by value/prefix:', opt.textContent, 'value:', opt.value);
+                  break;
+                }
               }
             }
+          }
+
+          if (usaOption) {
+            console.log('[FIFA] Selecting USA option:', usaOption.textContent, 'value:', usaOption.value);
+            sel.value = usaOption.value;
+            sel.dispatchEvent(new Event('change', { bubbles: true }));
+            sel.dispatchEvent(new Event('input', { bubbles: true }));
+            // Also trigger focus and blur for React compatibility
+            sel.focus();
+            sel.dispatchEvent(new Event('blur', { bubbles: true }));
+            filled++;
+            console.log('[FIFA] Selected country (USA) - current value now:', sel.value);
+          } else {
+            console.log('[FIFA] ERROR: Could not find United States option!');
           }
         } else {
           // For other countries, use flexible matching
