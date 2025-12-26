@@ -910,6 +910,13 @@
         autoFillPage();
       }
     }
+    // Alt+C for checkout actions (Accept downgrade + Add new card)
+    if (e.altKey && e.key.toLowerCase() === 'c') {
+      e.preventDefault();
+      console.log('[FIFA] Alt+C pressed - triggering checkout auto-click');
+      showNotification('Running checkout auto-click...');
+      autoClickCheckoutElements();
+    }
   });
 
   // Listen for messages from popup/background
@@ -1261,16 +1268,17 @@
   }
 
   // Check if we're on checkout/payment page and auto-click elements
+  // Now requires manual trigger with Alt+C to avoid interfering with form filling
   function checkAndAutoClickCheckout() {
     const url = window.location.href.toLowerCase();
-    const pageText = document.body?.textContent?.toLowerCase() || '';
 
-    // Check if on payment/checkout page
-    if (url.includes('checkout') || url.includes('payment') || url.includes('cart') ||
-        pageText.includes('add a new card') || pageText.includes('payment method') ||
-        pageText.includes('accept ticket')) {
-      console.log('[FIFA] Detected checkout/payment page, auto-clicking elements...');
+    // Only auto-run on specific checkout URLs to avoid interference
+    // Must have "checkout" or "payment" in URL (not just page text)
+    if (url.includes('checkout') || url.includes('payment') || url.includes('cart')) {
+      console.log('[FIFA] Detected checkout page by URL, auto-clicking elements...');
       autoClickCheckoutElements();
+    } else {
+      console.log('[FIFA] Not on checkout page. Use Alt+C to manually trigger checkout auto-click.');
     }
   }
 
