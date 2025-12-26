@@ -387,15 +387,12 @@
     const selects = document.querySelectorAll('select');
     console.log('[FIFA] Found', selects.length, 'select dropdowns');
 
+    // FIRST PASS: Select country first (state dropdown depends on it)
     for (const sel of selects) {
       const opts = Array.from(sel.options);
-      const optTexts = opts.map(o => o.textContent.toLowerCase());
       const selId = (sel.id || '').toLowerCase();
       const selName = (sel.name || '').toLowerCase();
 
-      console.log('[FIFA] Processing select:', selName || selId, 'with', opts.length, 'options:', optTexts.slice(0, 5));
-
-      // Direct FIFA dropdown targeting by ID/name
       // Country dropdown (FIFA uses id="country")
       if (selId === 'country' || selName === 'country') {
         const countryValue = (account.country || 'USA').toLowerCase();
@@ -416,6 +413,24 @@
             break;
           }
         }
+      }
+    }
+
+    // Wait for state dropdown to populate after country selection
+    await new Promise(r => setTimeout(r, 800));
+    console.log('[FIFA] Waited for state dropdown to load after country selection');
+
+    // SECOND PASS: Process all other dropdowns including state
+    for (const sel of selects) {
+      const opts = Array.from(sel.options);
+      const optTexts = opts.map(o => o.textContent.toLowerCase());
+      const selId = (sel.id || '').toLowerCase();
+      const selName = (sel.name || '').toLowerCase();
+
+      console.log('[FIFA] Processing select:', selName || selId, 'with', opts.length, 'options:', optTexts.slice(0, 5));
+
+      // Skip country (already handled)
+      if (selId === 'country' || selName === 'country') {
         continue;
       }
 
